@@ -71,11 +71,15 @@ def scrape_subreddit(subreddit_name, limit=10):
 
     return posts_data
 
-# Scrape data from r/scams subreddit
-data = scrape_subreddit('scams', limit=None)
+subreddit_list = ['scams', 'scambait', 'phishing']
 
-# Store data in a JSON file
-with open('scams_data.json', 'w') as f:
-    json.dump(data, f, indent=4)
+for subreddit in subreddit_list:
+    # Scrape data from r/scams, r/scambait subreddit
+    data = scrape_subreddit(subreddit, limit=None)
 
-print("Data scraping completed and saved to scams_data.json.")
+    # Store data in a JSON file
+    subreddit_json = subreddit + '.json'
+    with open(subreddit+'.json', 'w') as f:
+        json.dump(data, f, indent=4)
+
+    print(f"Data scraping completed and saved to {subreddit_json}")
