@@ -1,52 +1,59 @@
 import praw #type: ignore
-#  Praw is reddit's official api wrapper
-import pandas as pd #type: ignore
-import time
 import json
-# from dotenv import load_dotenv #type: ignore
+import time
 
+# Setup Reddit API connection
+reddit = praw.Reddit('DEFAULT')
 
-#fetch subreddit posts count
-def post_count(subreddit):
-    #initialize post count
-    pos = 0
+# Function to get top 5 replies for a comment
+def get_top_replies(comment, limit=5):
+    replies_data = []
+    comment.replies.replace_more(limit=0)  # Remove MoreComments placeholders
 
-    batch_size = 100
-    rate_limit_per_min = 100
-    delay_between_batches = 60/rate_limit_per_min
+    # Fetch replies and sort by upvotes
+    replies = [reply for reply in comment.replies if isinstance(reply, praw.models.Comment)]
+    sorted_replies = sorted(replies, key=lambda x: x.score, reverse=True)
 
-    for submission in subreddit.top(limit=None):
-        pos+=1
-        if pos%batch_size == 0:
-            print(f"Processed {pos} posts so far...")
-            time.sleep(delay_between_batches)
-    return pos
+    for reply in sorted_replies[:limit]:
+        reply_data = {
+            "comment_id": reply.id,
+            "parent_id": reply.parent_id,
+            "comment_text": reply.body,
+            "upvotes": reply.score,
+            "created_utc": reply.created_utc,
+            # You can add more fields if necessary
+        }
+        replies_data.append(reply_data)
+    return replies_data
 
-# Function to get comments and replies recursively
-def get_comment_data(comment):
-    comment_data = {
-        "comment_id": comment.id,
-        "parent_id": comment.parent_id,
-        "comment_text": comment.body,
-        "upvotes": comment.score,
-        "created_utc": comment.created_utc,
-        "replies": []
-    }
+# Function to get top 5 comments and their top 5 replies
+def get_top_comments_with_replies(post, limit=5):
+    comments_data = []
 
-    # Recursively get replies (if any)
-    if hasattr(comment, 'replies') and len(comment.replies) > 0:
-        for reply in comment.replies:
-            if isinstance(reply, praw.models.Comment):
-                comment_data['replies'].append(get_comment_data(reply))
+    post.comments.replace_more(limit=0)  # Remove MoreComments placeholders
 
-    return comment_data
+    # Fetch comments and sort by upvotes
+    comments = [comment for comment in post.comments if isinstance(comment, praw.models.Comment)]
+    sorted_comments = sorted(comments, key=lambda x: x.score, reverse=True)
 
-def scrape_subreddit(subreddit_name, limit):
+    for comment in sorted_comments[:limit]:
+        comment_data = {
+            "comment_id": comment.id,
+            "parent_id": comment.parent_id,
+            "comment_text": comment.body,
+            "upvotes": comment.score,
+            "created_utc": comment.created_utc,
+            "replies": get_top_replies(comment, limit=5)  # Get top 5 replies
+        }
+        comments_data.append(comment_data)
+    return comments_data
+
+# Function to scrape posts
+def scrape_subreddit(subreddit_name, limit=10):
     subreddit = reddit.subreddit(subreddit_name)
     posts_data = []
 
     for post in subreddit.top(limit=limit):
-        print("this is post", post)
         post_data = {
             "post_id": post.id,
             "title": post.title,
@@ -54,51 +61,21 @@ def scrape_subreddit(subreddit_name, limit):
             "flair": post.link_flair_text,
             "upvotes": post.score,
             "created_utc": post.created_utc,
-            "comments": []
+            "comments": get_top_comments_with_replies(post, limit=5)  # Get top 5 comments with replies
         }
-        # print("post data is", post_data)
-        # Get comments for the post
-        post.comments.replace_more(limit=5)  # Load all comments
-        for comment in post.comments.list():
-            post_data['comments'].append(get_comment_data(comment))
 
         posts_data.append(post_data)
-        print("post data is:\n", posts_data)
+
         # Sleep to respect rate limits
         time.sleep(2)
 
     return posts_data
 
-
-# Initialize the Reddit instance using the credentials from praw.ini
-reddit = praw.Reddit('DEFAULT')
-
-# verifying the connection
-print(reddit.read_only)
-
-#subreddit r/Scams, r/fraud, r/Phishing
-
-r_scams = reddit.subreddit("scams")
-r_fraud = reddit.subreddit("fraud")
-r_phishing = reddit.subreddit("phishing")
-
-# for post in r_scams.top(limit=10):
-#     print(post.title)
-
-#scraping data 
-'''
-Posts:
-    Title, post body, submission date, Flair
-Comments:
-    comment text, upvotes/downvotes, reply chains
-Meta data:
-    upvotes/downvotes for the post, timestamps, author karma(?)
-'''
-data = scrape_subreddit('scams', limit=1)
+# Scrape data from r/scams subreddit
+data = scrape_subreddit('scams', limit=None)
 
 # Store data in a JSON file
 with open('scams_data.json', 'w') as f:
     json.dump(data, f, indent=4)
 
-# fetch top 1500 posts, titles and posts comments
-
+print("Data scraping completed and saved to scams_data.json.")
