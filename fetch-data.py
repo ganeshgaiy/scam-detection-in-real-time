@@ -1,9 +1,12 @@
 import praw #type: ignore
 import json
 import time
+import extract_text as et
 
 # Setup Reddit API connection
 reddit = praw.Reddit('DEFAULT')
+
+save_path = 'C:/Users/6gane/OneDrive/Desktop/New folder/archive all subjects/Summer 2024/Machine Learning 5369L/DL Projects/scam detection/scam-detection-in-real-time/images/image.jpg'
 
 # Function to get top 5 replies for a comment
 def get_top_replies(comment, limit=5):
@@ -61,9 +64,34 @@ def scrape_subreddit(subreddit_name, limit=10):
             "flair": post.link_flair_text,
             "upvotes": post.score,
             "created_utc": post.created_utc,
-            "comments": get_top_comments_with_replies(post, limit=5)  # Get top 5 comments with replies
+            "comments": get_top_comments_with_replies(post, limit=5),  # Get top 5 comments with replies
+            "url": post.url,
+            "image_text": []
         }
 
+         # Check if the post contains images (single or gallery)
+        if hasattr(post, "is_gallery"):
+            # Loop through gallery images
+            for item in post.gallery_data['items']:
+                media_id = item['media_id']
+                image_url = f"https://i.redd.it/{media_id}.jpg"
+                
+                # Download and extract text from each image
+                et.download_image(image_url, save_path)
+                extracted_text = et.extract_text_from_image(save_path)
+                post_data['image_text'].append(extracted_text)
+
+        # If the post is a single image
+        elif post.url.endswith(('.jpg','.jpeg', '.png', '.gif')):
+            et.download_image(post.url, save_path)
+            extracted_text = et.extract_text_from_image(save_path)
+            post_data['image_text'].append(extracted_text)
+
+        # Print to track progress
+        print(f"Processed post {post.id} with title: {post.title}")
+        print("gallery: ", hasattr(post, 'is_gallery'))
+        print("url", post.url)
+        print('image_text', post_data['image_text'])
         posts_data.append(post_data)
 
         # Sleep to respect rate limits
@@ -71,7 +99,7 @@ def scrape_subreddit(subreddit_name, limit=10):
 
     return posts_data
 
-subreddit_list = ['scams', 'scambait', 'phishing']
+subreddit_list = ['scams', 'phishing']
 
 for subreddit in subreddit_list:
     # Scrape data from r/scams, r/scambait subreddit
@@ -79,7 +107,10 @@ for subreddit in subreddit_list:
 
     # Store data in a JSON file
     subreddit_json = subreddit + '.json'
-    with open(subreddit+'.json', 'w') as f:
+    with open(subreddit_json, 'w') as f:
         json.dump(data, f, indent=4)
 
     print(f"Data scraping completed and saved to {subreddit_json}")
+
+
+
