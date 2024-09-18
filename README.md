@@ -1,6 +1,6 @@
 # Scam call detection in real time using an on-device LLM
 
-The main goal of this project is to build a system capable of classifying if a conversation is a scam. 
+The main goal of this project is to build a system capable of classifying if a real time phone conversation is a scam. 
 
 # Proposed workflow:
 1. The feature is integrated into your phone's native calling app or a separate security app.
