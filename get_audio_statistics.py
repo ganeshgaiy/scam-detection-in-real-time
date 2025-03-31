@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from collections import Counter
 
 # Define the folder path
-folder_path = './audio-files/audio-wav-16khz'  # Replace with your folder path
+folder_path = './audio-files-data/dataset/robocall'  # Replace with your folder path
 
 # Collect all WAV files in the folder
 audio_files = glob.glob(os.path.join(folder_path, '*.wav'))
