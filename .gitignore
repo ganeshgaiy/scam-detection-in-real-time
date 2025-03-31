@@ -1,2 +1,9 @@
 praw.ini
 # scams_data.json
+audio-files-data/dataset
+audio-files-data/normal_call_stereo
+audio-files-data/output_left_normal
+audio-files-data/output_normal_left_cleaned
+audio-files-data/output_normal_left_segmented
+audio-files-data/output_right_normal
+audio-files-data/robocall_left
